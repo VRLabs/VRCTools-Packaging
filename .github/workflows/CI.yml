@@ -79,7 +79,7 @@ jobs:
           mv bin/Release/publish/VRLabs.VRCTools.Packaging.Console bin/Release/publish/VRCPackagingTool${1##*.}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: VRCPackagingTool-${{ matrix.RUNTIME }}
           path: bin/Release/publish/
