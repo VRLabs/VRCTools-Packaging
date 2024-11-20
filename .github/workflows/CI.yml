@@ -154,6 +154,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: bin/Release/publish
+          pattern: VRCPackagingTool-*
 
       - name: Zip each artifact
         run: |
