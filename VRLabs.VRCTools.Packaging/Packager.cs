@@ -11,18 +11,23 @@ namespace VRLabs.VRCTools.Packaging;
 
 public static class Packager
 {
-    public static async Task<bool> CreatePackage(string workingDirectory, string outputDirectory, string? releaseUrl = null, string? unityPackageUrl = null, string? version = null, bool skipVcc = false, bool skipUnityPackage = false)
+    public static async Task<bool> CreatePackage(PackagingOptions options)
     {
-        if (skipVcc && skipUnityPackage)
+        if (options.SkipVcc && options.SkipUnityPackage)
         {
             Log.Information("Both skipVcc and skipUnityPackage are true, nothing to do");
             return true;
         }
-        var data = GetPackageJson(workingDirectory, skipUnityPackage);
+        var data = GetPackageJson(options.WorkingDirectory, options.SkipUnityPackage);
         if (data == null)
         {
-            Log.Error("Could not find valid package.json in {WorkingDirectory}", workingDirectory);
+            Log.Error("Could not find valid package.json in {WorkingDirectory}", options.WorkingDirectory);
             return false;
+        }
+        
+        foreach (var keyValuePair in options.CustomFields)
+        {
+            data[keyValuePair.Key] = keyValuePair.Value;
         }
         
         string tempPath = Path.GetTempPath();
@@ -30,29 +35,29 @@ public static class Packager
         if(Directory.Exists(tempPath)) DeleteDirectory(tempPath);
         Directory.CreateDirectory(tempPath);
         
-        if(!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
+        if(!Directory.Exists(options.OutputDirectory)) Directory.CreateDirectory(options.OutputDirectory);
         
         string? sha256String = null;
         data.Remove("zipSHA256");
 
         string packageName = data["name"]!.ToString();
         
-        if(!string.IsNullOrEmpty(version))
-            data["version"] = version;
-        
+        if(!string.IsNullOrEmpty(options.Version))
+            data["version"] = options.Version;
+
         string packageVersion = data["version"]!.ToString();
         
         StringBuilder githubOutput = new();
 
         // VCC Package Creation
-        if (!skipVcc)
+        if (!options.SkipVcc)
         {
-            if(!string.IsNullOrEmpty(releaseUrl))
-                data["url"] = releaseUrl;
+            if(!string.IsNullOrEmpty(options.ReleaseUrl))
+                data["url"] = options.ReleaseUrl;
             
-            CopyDirectory(workingDirectory, tempPath, true, true);
+            CopyDirectory(options.WorkingDirectory, tempPath, true, true);
             string outputFileName = $"{packageName}-{packageVersion}.zip";
-            string outputFilePath = $"{outputDirectory}/{outputFileName}";
+            string outputFilePath = $"{options.OutputDirectory}/{outputFileName}";
 
             string jsonPath = tempPath + "/package.json";
             if (File.Exists(jsonPath))
@@ -70,8 +75,7 @@ public static class Packager
                 CreateZipFile(tempPath, outputFilePath, matchedAssets.ToList());
                 
                 Log.Information("Finished Zipping, available at {OutputFilePath}", outputFilePath);
-                if(Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS") is not null &&
-                   Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS")!.Equals("true"))
+                if(options.IsRunningOnGithubActions)
                 {
                     githubOutput.AppendLine($"vccPackagePath={outputFilePath}");
                 }
@@ -85,20 +89,20 @@ public static class Packager
         }
 
         // Unity Package Creation
-        if (!skipUnityPackage)
+        if (!options.SkipUnityPackage)
         {
             string unityPackageDestinationFolder = data["unityPackageDestinationFolder"]?.ToString() ?? $"Assets/{data["name"]}";
             
-            if (!string.IsNullOrEmpty(unityPackageUrl))
-                data["unityPackageUrl"] = unityPackageUrl;
+            if (!string.IsNullOrEmpty(options.UnityPackageUrl))
+                data["unityPackageUrl"] = options.UnityPackageUrl;
 
             var folderMetas = data["unityPackageDestinationFolderMetas"].Deserialize<Dictionary<string, string>>();
             CreateExtraFolders(tempPath, folderMetas);
 
-            CopyDirectory(workingDirectory, tempPath + "/" + unityPackageDestinationFolder, true);
+            CopyDirectory(options.WorkingDirectory, tempPath + "/" + unityPackageDestinationFolder, true);
             
             string outputFileName = $"{packageName}-{packageVersion}.unitypackage";
-            string outputFilePath = $"{outputDirectory}/{outputFileName}";
+            string outputFilePath = $"{options.OutputDirectory}/{outputFileName}";
         
             string jsonPath = tempPath + "/" + unityPackageDestinationFolder + "/package.json";
             if (File.Exists(jsonPath))
@@ -150,8 +154,7 @@ public static class Packager
             await packer.FlushAsync();
             
             Log.Information("Finished Packaging, available at {OutputFilePath}", outputFilePath);
-            if(Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS") is not null &&
-               Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS")!.Equals("true"))
+            if(options.IsRunningOnGithubActions)
             {
                 githubOutput.AppendLine($"unityPackagePath={outputFilePath}");
             }
@@ -161,12 +164,11 @@ public static class Packager
         if(sha256String is not null)
             data["zipSHA256"] = sha256String;
         
-        var serverPackageJsonPath = $"{outputDirectory}/server-package.json"; 
+        var serverPackageJsonPath = $"{options.OutputDirectory}/server-package.json"; 
         
         await File.WriteAllTextAsync(serverPackageJsonPath, JsonSerializer.Serialize(data));
         Log.Information("Finished creating server-package.json, available at {OutputFilePath}", serverPackageJsonPath);
-        if(Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS") is not null &&
-           Environment.GetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS")!.Equals("true"))
+        if(options.IsRunningOnGithubActions)
         {
             githubOutput.AppendLine($"serverPackageJsonPath={serverPackageJsonPath}");
 

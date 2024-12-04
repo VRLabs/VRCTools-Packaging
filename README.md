@@ -34,6 +34,12 @@ Only generating the `vcc` package:
 VRCPackagingTool.exe "packageAssetsPath" "outputDirectorypath" --releaseUrl "vccReleaseUrl" --nounity  
 ```
 
+With custom json fields in the `package.json`,useful for custom vcc clients that may use additional fields (for example [ALCOM's](https://vrc-get.anatawa12.com/alcom/) custom changelog url field):
+
+```
+VRCPackagingTool.exe "packageAssetsPath" "outputDirectorypath" --releaseUrl "vccReleaseUrl" --unityReleaseUrl "unityReleaseUrl" --customJsonFields "changelogUrl=https://link.to.changelog" "anotherField=anotherValue"
+```
+
 You can use the `--help` or `-h` flag to get a list of all the available options.
 
 ```
@@ -49,16 +55,15 @@ Arguments:
   <output>  Output directory path
 
 Options:
-  --releaseUrl <releaseUrl>            Url of the release []
-  --unityReleaseUrl <unityReleaseUrl>  Url of the release of the unitypackage []
-  --releaseVersion <releaseVersion>    Version to use for the release, if not specified it will be taken from the package.json []
-  --novcc                              don't build the vcc zip file [default: False]
-  --nounity                            don't build the unitypackage [default: False]
-  --action                             is it running on github actions? [default: False]
-  --version                            Show version information
-  -?, -h, --help                       Show help and usage information
-
-
+  --releaseUrl <releaseUrl>              Url of the release []
+  --unityReleaseUrl <unityReleaseUrl>    Url of the release of the unitypackage []
+  --releaseVersion <releaseVersion>      Version to use for the release, if not specified it will be taken from the package.json []
+  --novcc                                don't build the vcc zip file [default: False]
+  --nounity                              don't build the unitypackage [default: False]
+  --action                               is it running on github actions? [default: False]
+  --customJsonFields <customJsonFields>  custom json fields to add to the package.json []
+  --version                              Show version information
+  -?, -h, --help                         Show help and usage information
 ```
 
 
@@ -75,7 +80,7 @@ The tool can use some additional fields in the `package.json` for the packaging 
 
 (Fields marked with * are required for the UnityPackage generation)
 
-And it adds some additional fields to the `package.json`:
+And it adds some additional fields to the `package.json` (on top of the one passed via the `--customJsonFields` option):
 
 | Field             | Description                                                        |
 |-------------------|--------------------------------------------------------------------|

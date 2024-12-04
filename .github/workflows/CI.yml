@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '7.x.x'
+          dotnet-version: '9.x.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -46,7 +46,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set version from branch name
         id: set_version
@@ -63,9 +63,9 @@ jobs:
           echo "image_name=$lowercase" >> $GITHUB_OUTPUT
 
       - name: Setup .NET Core
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '7.x.x'
+          dotnet-version: '9.x.x'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -79,7 +79,7 @@ jobs:
           mv bin/Release/publish/VRLabs.VRCTools.Packaging.Console bin/Release/publish/VRCPackagingTool${1##*.}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: VRCPackagingTool-${{ matrix.RUNTIME }}
           path: bin/Release/publish/
@@ -89,7 +89,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set version from branch name
         id: set_version
@@ -110,7 +110,7 @@ jobs:
           sed -i "s/<Version>.*<\/Version>/<Version>${{ steps.set_version.outputs.version }}<\/Version>/" VRLabs.VRCTools.Packaging.Console/VRLabs.VRCTools.Packaging.Console.csproj
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -119,7 +119,7 @@ jobs:
       # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see "[Usage](https://github.com/docker/build-push-action#usage)" in the README of the `docker/build-push-action` repository.
       # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./VRLabs.VRCTools.Packaging.Console/Dockerfile
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set version from branch name
         id: set_version
@@ -151,9 +151,10 @@ jobs:
           echo "image_name=$lowercase" >> $GITHUB_OUTPUT
 
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: bin/Release/publish
+          pattern: VRCPackagingTool-*
 
       - name: Zip each artifact
         run: |

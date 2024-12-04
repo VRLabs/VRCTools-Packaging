@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using Serilog;
 using VRLabs.VRCTools.Packaging;
+using VRLabs.VRCTools.Packaging.Console;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -14,6 +15,7 @@ var versionOpt = new Option<string?>(name: "--releaseVersion", getDefaultValue: 
 var noVccOpt = new Option<bool>(name: "--novcc", getDefaultValue: () => false, description: "don't build the vcc zip file");
 var noUnityOpt = new Option<bool>(name: "--nounity", getDefaultValue: () => false, description: "don't build the unitypackage");
 var actionOpt = new Option<bool>(name: "--action", getDefaultValue: () => false, description: "is it running on github actions?");
+var customFieldsOpt = new Option<string[]>(name: "--customJsonFields", getDefaultValue: () => [], description: "custom json fields to add to the package.json"){AllowMultipleArgumentsPerToken = true};
 
 var command = new RootCommand("Packs the assets inside a folder in a Unity Project based on an info file")
 {
@@ -24,15 +26,15 @@ var command = new RootCommand("Packs the assets inside a folder in a Unity Proje
     versionOpt,
     noVccOpt,
     noUnityOpt,
-    actionOpt
+    actionOpt,
+    customFieldsOpt
 };
 
-command.SetHandler(async (source, output, releaseUrl, unityReleaseUrl, version, noVcc, noUnity, action) =>
+command.SetHandler(async (packagingOptions) =>
 {
     try
     {
-        Environment.SetEnvironmentVariable("RUNNING_ON_GITHUB_ACTIONS", action ? "true" : "false");
-        var result = await Packager.CreatePackage(source, output, releaseUrl, unityReleaseUrl, version, noVcc, noUnity);
+        var result = await Packager.CreatePackage(packagingOptions);
         if (!result)
         {
             Log.Error("Failed to create package");
@@ -45,6 +47,6 @@ command.SetHandler(async (source, output, releaseUrl, unityReleaseUrl, version, 
         Environment.Exit(1);
     }
     
-}, pathArg, outputArg, releaseUrlOpt, unityReleaseUrlOpt, versionOpt, noVccOpt, noUnityOpt, actionOpt);
+}, new PackagingOptionsBinder(pathArg, outputArg, releaseUrlOpt, unityReleaseUrlOpt, versionOpt, noVccOpt, noUnityOpt, actionOpt, customFieldsOpt));
 
 command.Invoke(args);
